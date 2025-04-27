@@ -39,7 +39,7 @@
             border: none;
             padding: 0 12px;
             font-size: 24px;
-            height: 120px;
+            height: 80px;
             cursor: pointer;
             color: #333;
             border-radius: 12px;
@@ -67,11 +67,14 @@
             flex-direction: column;
             justify-content: flex-start;
             padding: 16px;
+            overflow-y: auto;
         }
         .list {
             list-style: none;
             padding: 0;
             margin: 0;
+            flex: 1;
+            overflow-y: auto;
         }
         .list li {
             margin-bottom: 12px;
@@ -83,6 +86,7 @@
             border: none;
             padding: 0;
             margin: 0;
+            color: #333;
         }
         .list button.increment {
             flex: 1;
@@ -123,6 +127,19 @@
             color: #fff;
             opacity: 1;
         }
+        .confirm-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            background: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        .confirm-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +157,7 @@
         <div class="custom-bar">
             <!-- botones de personalización -->
         </div>
+        <button id="confirm-btn" class="confirm-btn" disabled>Confirmar</button>
         <div class="content">
             <ul class="list">
                 <!-- Lista inicialmente vacía, se llenará dinámicamente -->
@@ -149,38 +167,29 @@
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const list = document.querySelector('.list');
-        const customOptions = ['descafeinado', 'sin lactosa', 'con hielo', 'corto', 'templado'];
-        const coffeeButtons = Array.from(document.querySelectorAll('.top-bar button'));
         const customBar = document.querySelector('.custom-bar');
+        const coffeeButtons = Array.from(document.querySelectorAll('.top-bar button'));
+        const confirmBtn = document.getElementById('confirm-btn');
+        let currentType = '';
+        const customOptions = ['descafeinado','sin lactosa','con hielo','corto','templado'];
         const emojiMap = {
-          'descafeinado': '🚫',
-          'sin lactosa': '🥛❌',
-          'con hielo': '❄️',
-          'corto': '↙️',
-          'templado': '🌡️'
+          'descafeinado':'🚫',
+          'sin lactosa':'🥛❌',
+          'con hielo':'❄️',
+          'corto':'↙️',
+          'templado':'🌡️'
         };
-         // crear botones de personalización siempre habilitados
-         customOptions.forEach(opt => {
-          const btn = document.createElement('button');
-          btn.textContent = `${emojiMap[opt]} ${opt}`;
-           btn.classList.add('custom-btn');
-           btn.addEventListener('click', () => {
-             btn.classList.toggle('active');
-           });
-           customBar.appendChild(btn);
-         });
 
-        // al pulsar tipo de café, agregar o incrementar elemento con +/–
-        coffeeButtons.forEach(btn => btn.addEventListener('click', () => {
-          const type = btn.textContent;
-          const selectedOpts = Array.from(customBar.querySelectorAll('.active')).map(b => b.textContent);
-          const name = type + (selectedOpts.length ? ' – ' + selectedOpts.join(', ') : '');
+         // función para añadir o incrementar elemento en lista
+         function confirmSelection() {
+          if (!currentType) return;
+          const selectedOpts = customButtons.filter(b => b.classList.contains('active')).map(b => b.textContent);
+          const name = currentType + (selectedOpts.length ? ' – ' + selectedOpts.join(', ') : '');
           let existing = list.querySelector(`li[data-name="${name}"]`);
           if (existing) {
             let count = parseInt(existing.dataset.count) + 1;
             existing.dataset.count = count;
-            const inc = existing.querySelector('button.increment');
-            inc.textContent = `+ ${count}x ${name}`;
+            existing.querySelector('button.increment').textContent = `+ ${count}x ${name}`;
           } else {
             const li = document.createElement('li');
             li.dataset.name = name;
@@ -201,15 +210,51 @@
               if (c > 0) {
                 li.dataset.count = c;
                 inc.textContent = `+ ${c}x ${name}`;
-              } else {
-                li.remove();
-              }
+              } else li.remove();
             });
             li.append(inc, dec);
             list.appendChild(li);
           }
-          // reset custom selections
-          customBar.querySelectorAll('button.active').forEach(b => b.classList.remove('active'));
+          // resetear selección
+          currentType = '';
+          coffeeButtons.forEach(b => b.classList.remove('selected'));
+          customButtons.forEach(b => b.classList.remove('active'));
+          confirmBtn.disabled = true;
+          // disable customization buttons until next coffee selection
+          customButtons.forEach(b => b.disabled = true);
+        }
+        // confirmar al pulsar botón Confirmar
+        confirmBtn.addEventListener('click', confirmSelection);
+
+        // crear botones de personalización siempre habilitados
+        customOptions.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.textContent = `${emojiMap[opt]} ${opt}`;
+          btn.classList.add('custom-btn');
+          btn.disabled = true; // start disabled until coffee selected
+          btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+          });
+          customBar.appendChild(btn);
+        });
+        // reconstruir customButtons tras creación
+        const customButtons = Array.from(customBar.querySelectorAll('button'));
+
+        // manejar selección y confirmación en botones de café
+        coffeeButtons.forEach(btn => btn.addEventListener('click', () => {
+          const type = btn.textContent;
+          if (currentType === type) {
+            // segundo clic confirma
+            confirmSelection();
+          } else {
+            // nueva selección de café
+            currentType = type;
+            coffeeButtons.forEach(b => b.classList.toggle('selected', b === btn));
+            // enable customization buttons
+            customButtons.forEach(b => b.disabled = false);
+            customButtons.forEach(b => b.classList.remove('active'));
+            confirmBtn.disabled = false;
+          }
         }));
       });
     </script>
